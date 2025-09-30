@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>坐标测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1e3c72;
+            color: white;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        #test-canvas {
+            border: 2px solid #fff;
+            background: #2a5298;
+            display: block;
+            margin: 20px auto;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .info {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        .coords {
+            font-family: monospace;
+            font-size: 1.2em;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 坐标测试</h1>
+        <div class="info">
+            <p>点击或触摸Canvas测试坐标计算</p>
+            <div class="coords">
+                <div>鼠标坐标: <span id="mouse-coords">-</span></div>
+                <div>Canvas坐标: <span id="canvas-coords">-</span></div>
+                <div>棋盘坐标: <span id="board-coords">-</span></div>
+            </div>
+        </div>
+        
+        <canvas id="test-canvas" width="600" height="600"></canvas>
+        
+        <div class="info">
+            <p>✅ 如果红点出现在点击位置，说明坐标计算正确</p>
+            <p>📱 在移动端测试触摸是否准确</p>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置（简化版）
+        const GameConfig = {
+            BOARD_SIZE: 15,
+            CELL_SIZE: 35,
+            BOARD_PADDING: 50
+        };
+
+        // 工具函数
+        const Utils = {
+            pixelToBoard(pixelX, pixelY) {
+                const x = Math.round((pixelX - GameConfig.BOARD_PADDING) / GameConfig.CELL_SIZE);
+                const y = Math.round((pixelY - GameConfig.BOARD_PADDING) / GameConfig.CELL_SIZE);
+                return { x, y };
+            },
+            
+            boardToPixel(boardX, boardY) {
+                const x = boardX * GameConfig.CELL_SIZE + GameConfig.BOARD_PADDING;
+                const y = boardY * GameConfig.CELL_SIZE + GameConfig.BOARD_PADDING;
+                return { x, y };
+            }
+        };
+
+        class CoordinateTest {
+            constructor() {
+                this.canvas = document.getElementById('test-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.clickPoints = [];
+                
+                this.initCanvas();
+                this.bindEvents();
+                this.drawBoard();
+            }
+
+            initCanvas() {
+                const size = GameConfig.BOARD_SIZE * GameConfig.CELL_SIZE + GameConfig.BOARD_PADDING * 2;
+                this.canvas.width = size;
+                this.canvas.height = size;
+                
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+            }
+
+            bindEvents() {
+                this.canvas.addEventListener('click', this.handleClick.bind(this));
+                this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                
+                // 移动端触摸事件
+                this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+                this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
+            }
+
+            getEventCoordinates(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                
+                let clientX, clientY;
+                
+                if (event.touches && event.touches.length > 0) {
+                    clientX = event.touches[0].clientX;
+                    clientY = event.touches[0].clientY;
+                } else if (event.changedTouches && event.changedTouches.length > 0) {
+                    clientX = event.changedTouches[0].clientX;
+                    clientY = event.changedTouches[0].clientY;
+                } else {
+                    clientX = event.clientX;
+                    clientY = event.clientY;
+                }
+                
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                
+                const x = (clientX - rect.left) * scaleX;
+                const y = (clientY - rect.top) * scaleY;
+                
+                return { x, y };
+            }
+
+            handleClick(event) {
+                const coords = this.getEventCoordinates(event);
+                this.processClick(coords, event);
+            }
+
+            handleTouchStart(event) {
+                event.preventDefault();
+                this.touchStartTime = Date.now();
+            }
+
+            handleTouchEnd(event) {
+                event.preventDefault();
+                const touchDuration = Date.now() - this.touchStartTime;
+                
+                if (touchDuration < 500) {
+                    const coords = this.getEventCoordinates(event);
+                    this.processClick(coords, event);
+                }
+            }
+
+            handleMouseMove(event) {
+                const coords = this.getEventCoordinates(event);
+                const boardPos = Utils.pixelToBoard(coords.x, coords.y);
+                
+                document.getElementById('mouse-coords').textContent = 
+                    `(${event.clientX}, ${event.clientY})`;
+                document.getElementById('canvas-coords').textContent = 
+                    `(${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})`;
+                document.getElementById('board-coords').textContent = 
+                    `(${boardPos.x}, ${boardPos.y})`;
+            }
+
+            processClick(coords, event) {
+                const boardPos = Utils.pixelToBoard(coords.x, coords.y);
+                
+                // 添加点击点
+                this.clickPoints.push({
+                    canvas: coords,
+                    board: boardPos,
+                    timestamp: Date.now()
+                });
+                
+                // 只保留最近10个点
+                if (this.clickPoints.length > 10) {
+                    this.clickPoints.shift();
+                }
+                
+                this.redraw();
+                
+                console.log('点击事件:', {
+                    mouse: `(${event.clientX}, ${event.clientY})`,
+                    canvas: `(${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})`,
+                    board: `(${boardPos.x}, ${boardPos.y})`
+                });
+            }
+
+            drawBoard() {
+                const ctx = this.ctx;
+                const size = GameConfig.BOARD_SIZE;
+                
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制网格
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < size; i++) {
+                    const pos = i * GameConfig.CELL_SIZE + GameConfig.BOARD_PADDING;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(GameConfig.BOARD_PADDING, pos);
+                    ctx.lineTo(GameConfig.BOARD_PADDING + (size - 1) * GameConfig.CELL_SIZE, pos);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(pos, GameConfig.BOARD_PADDING);
+                    ctx.lineTo(pos, GameConfig.BOARD_PADDING + (size - 1) * GameConfig.CELL_SIZE);
+                    ctx.stroke();
+                }
+                
+                // 绘制星位
+                const starPoints = [
+                    {x: 3, y: 3}, {x: 7, y: 7}, {x: 11, y: 3},
+                    {x: 3, y: 11}, {x: 11, y: 11}
+                ];
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                starPoints.forEach(point => {
+                    const pixelPos = Utils.boardToPixel(point.x, point.y);
+                    ctx.beginPath();
+                    ctx.arc(pixelPos.x, pixelPos.y, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            }
+
+            redraw() {
+                this.drawBoard();
+                
+                // 绘制点击点
+                this.clickPoints.forEach((point, index) => {
+                    const alpha = (index + 1) / this.clickPoints.length;
+                    
+                    // 绘制实际点击位置（红色）
+                    this.ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(point.canvas.x, point.canvas.y, 8, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                    
+                    // 绘制棋盘网格位置（绿色）
+                    if (point.board.x >= 0 && point.board.x < GameConfig.BOARD_SIZE &&
+                        point.board.y >= 0 && point.board.y < GameConfig.BOARD_SIZE) {
+                        const gridPos = Utils.boardToPixel(point.board.x, point.board.y);
+                        this.ctx.fillStyle = `rgba(0, 255, 0, ${alpha * 0.7})`;
+                        this.ctx.beginPath();
+                        this.ctx.arc(gridPos.x, gridPos.y, 12, 0, 2 * Math.PI);
+                        this.ctx.fill();
+                    }
+                });
+            }
+        }
+
+        // 启动测试
+        window.addEventListener('load', () => {
+            new CoordinateTest();
+        });
+    </script>
+</body>
+</html>

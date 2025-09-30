@@ -17,6 +17,9 @@ class GameUI {
         this.selectedPositions = [];
         this.isSelectionMode = false;
         
+        // 初始化Canvas尺寸（移动端兼容）
+        this.initCanvasSize();
+        
         // 绑定事件
         this.bindEvents();
         
@@ -25,10 +28,20 @@ class GameUI {
     }
 
     /**
+     * 初始化Canvas尺寸（移动端兼容）
+     */
+    initCanvasSize() {
+        // 这个方法现在只是占位，实际尺寸在initCanvas中设置
+        // 避免重复设置导致的坐标问题
+    }
+
+    /**
      * 初始化画布
      */
     initCanvas() {
         const size = GameConfig.BOARD_SIZE * this.cellSize + this.boardPadding * 2;
+        
+        // 设置Canvas的实际尺寸
         this.canvas.width = size;
         this.canvas.height = size;
         
@@ -44,17 +57,23 @@ class GameUI {
         this.canvas.addEventListener('click', this.handleClick.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
+        
+        // 移动端触摸事件
+        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+        this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+        this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
+        
+        // 窗口大小改变时重新初始化Canvas
+        window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('orientationchange', this.handleResize.bind(this));
     }
 
     /**
      * 处理点击事件
      */
     handleClick(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        const boardPos = Utils.pixelToBoard(x, y);
+        const coords = this.getEventCoordinates(event);
+        const boardPos = Utils.pixelToBoard(coords.x, coords.y);
         
         if (this.isSelectionMode) {
             this.handleSelectionClick(boardPos);
@@ -98,11 +117,8 @@ class GameUI {
      * 处理鼠标移动事件
      */
     handleMouseMove(event) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        const boardPos = Utils.pixelToBoard(x, y);
+        const coords = this.getEventCoordinates(event);
+        const boardPos = Utils.pixelToBoard(coords.x, coords.y);
         
         if (this.hoveredPosition?.x !== boardPos.x || this.hoveredPosition?.y !== boardPos.y) {
             this.hoveredPosition = boardPos;
@@ -116,6 +132,95 @@ class GameUI {
     handleMouseLeave() {
         this.hoveredPosition = null;
         this.redraw();
+    }
+
+    /**
+     * 获取事件坐标（兼容移动端和桌面端）
+     * @param {Event} event - 鼠标或触摸事件
+     * @returns {Object} {x, y} 相对于Canvas的坐标
+     */
+    getEventCoordinates(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        
+        let clientX, clientY;
+        
+        // 处理触摸事件
+        if (event.touches && event.touches.length > 0) {
+            clientX = event.touches[0].clientX;
+            clientY = event.touches[0].clientY;
+        } else if (event.changedTouches && event.changedTouches.length > 0) {
+            clientX = event.changedTouches[0].clientX;
+            clientY = event.changedTouches[0].clientY;
+        } else {
+            // 鼠标事件
+            clientX = event.clientX;
+            clientY = event.clientY;
+        }
+        
+        // 计算相对于Canvas的坐标
+        // 考虑Canvas可能被CSS缩放的情况
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
+        
+        return { x, y };
+    }
+
+    /**
+     * 处理触摸开始事件
+     */
+    handleTouchStart(event) {
+        event.preventDefault();
+        this.touchStartTime = Date.now();
+        this.touchStartPos = this.getEventCoordinates(event);
+    }
+
+    /**
+     * 处理触摸移动事件
+     */
+    handleTouchMove(event) {
+        event.preventDefault();
+        const coords = this.getEventCoordinates(event);
+        const boardPos = Utils.pixelToBoard(coords.x, coords.y);
+        
+        if (this.hoveredPosition?.x !== boardPos.x || this.hoveredPosition?.y !== boardPos.y) {
+            this.hoveredPosition = boardPos;
+            this.redraw();
+        }
+    }
+
+    /**
+     * 处理触摸结束事件
+     */
+    handleTouchEnd(event) {
+        event.preventDefault();
+        
+        // 检查是否是点击（而不是滑动）
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - this.touchStartTime;
+        
+        if (touchDuration < 500) { // 500ms内的触摸认为是点击
+            const coords = this.getEventCoordinates(event);
+            const boardPos = Utils.pixelToBoard(coords.x, coords.y);
+            
+            if (this.isSelectionMode) {
+                this.handleSelectionClick(boardPos);
+            } else {
+                this.handleGameClick(boardPos);
+            }
+        }
+    }
+
+    /**
+     * 处理窗口大小改变
+     */
+    handleResize() {
+        // 延迟执行，等待布局稳定
+        setTimeout(() => {
+            this.redraw();
+        }, 100);
     }
 
     /**
