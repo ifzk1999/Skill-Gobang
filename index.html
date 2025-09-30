@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>技能五子棋 - 创新的在线五子棋游戏</title>
+    <meta name="description" content="具有特殊技能系统的创新五子棋游戏，支持与智能AI对战，拥有精美的星空蓝主题界面">
+    <meta name="keywords" content="五子棋,技能,AI,在线游戏,策略游戏">
+    <meta name="author" content="技能五子棋开发团队">
+    
+    <!-- PWA支持 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3c72">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="技能五子棋">
+    
+    <!-- 社交分享 -->
+    <meta property="og:title" content="技能五子棋 - 创新的在线五子棋游戏">
+    <meta property="og:description" content="具有特殊技能系统的五子棋游戏，支持AI对战">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://your-domain.com/preview.png">
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <!-- 图标 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzFlM2M3MiIvPgo8Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iMiIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjgiIHI9IjIiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSI4IiByPSIyIiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjgiIGN5PSIxNiIgcj0iMiIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIyIiBmaWxsPSIjZmZkNzAwIi8+CjxjaXJjbGUgY3g9IjI0IiBjeT0iMTYiIHI9IjIiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iOCIgY3k9IjI0IiByPSIyIiBmaWxsPSIjMDAwMDAwIi8+CjxjaXJjbGUgY3g9IjE2IiBjeT0iMjQiIHI9IjIiIGZpbGw9IiMwMDAwMDAiLz4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMiIgZmlsbD0iIzAwMDAwMCIvPgo8L3N2Zz4K">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1>技能五子棋</h1>
+            <div class="game-status">
+                <span id="current-player">玩家回合</span>
+                <button id="new-game-btn" class="btn btn-primary">新游戏</button>
+            </div>
+        </header>
+
+        <main class="game-main">
+            <div class="game-board-container">
+                <canvas id="game-board" width="600" height="600"></canvas>
+            </div>
+
+            <div class="game-controls">
+                <div class="skills-panel">
+                    <h3>技能</h3>
+                    <div class="skills-grid">
+                        <button id="skill-flying-sand" class="skill-btn" data-skill="flyingSand">
+                            <span class="skill-name">飞沙走石</span>
+                            <span class="skill-desc">搅乱5颗棋子</span>
+                            <span class="skill-uses">剩余: 1</span>
+                        </button>
+                        <button id="skill-mountain-mover" class="skill-btn" data-skill="mountainMover">
+                            <span class="skill-name">力拔山兮</span>
+                            <span class="skill-desc">随机移除3颗棋子</span>
+                            <span class="skill-uses">剩余: 1</span>
+                        </button>
+                        <button id="skill-time-rewind" class="skill-btn" data-skill="timeRewind">
+                            <span class="skill-name">时光倒流</span>
+                            <span class="skill-desc">回溯到上一回合</span>
+                            <span class="skill-uses">剩余: 1</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="game-info">
+                    <div class="move-counter">
+                        <span>回合数: <span id="move-count">0</span></span>
+                    </div>
+                    <div class="ai-status">
+                        <span id="ai-thinking" class="ai-thinking hidden">AI思考中...</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="game-result-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="result-title">游戏结束</h2>
+                <p id="result-message">恭喜获胜！</p>
+                <div class="modal-actions">
+                    <button id="play-again-btn" class="btn btn-primary">再来一局</button>
+                    <button id="close-modal-btn" class="btn btn-secondary">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="skill-selection-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <h2 id="skill-selection-title">选择目标</h2>
+                        <p id="skill-selection-message">请选择要移除的棋子</p>
+                        <div class="modal-actions">
+                            <button id="confirm-skill-btn" class="btn btn-primary">确认</button>
+                            <button id="cancel-skill-btn" class="btn btn-secondary">取消</button>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <!-- 环境配置 (需要用户创建) -->
+        <script src="js/env.js"></script>
+        
+        <!-- 核心系统 -->
+        <script src="js/errorHandler.js"></script>
+        <script src="js/performance.js"></script>
+        <script src="js/config.js"></script>
+        <script src="js/utils.js"></script>
+        
+        <!-- 游戏组件 -->
+        <script src="js/BoardManager.js"></script>
+        <script src="js/WinChecker.js"></script>
+        <script src="js/GameHistoryManager.js"></script>
+        <script src="js/SkillSystem.js"></script>
+        <script src="js/SmartAI.js"></script>
+        <script src="js/AIService.js"></script>
+        <script src="js/GameUI.js"></script>
+        <script src="js/GameController.js"></script>
+        
+        <!-- 扩展功能 -->
+        <script src="js/gameSettings.js"></script>
+        <script src="js/gameAnalytics.js"></script>
+        
+        <!-- 主入口 -->
+        <script src="js/main.js"></script>
+        
+        <!-- PWA安装提示 -->
+        <div id="install-prompt" class="install-prompt" style="display: none;">
+            <div class="install-content">
+                <h3>📱 安装到主屏幕</h3>
+                <p>将技能五子棋添加到主屏幕，获得更好的游戏体验！</p>
+                <div class="install-buttons">
+                    <button id="install-btn" class="btn btn-primary">安装应用</button>
+                    <button id="install-dismiss" class="btn btn-secondary">稍后再说</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Worker注册 -->
+        <script>
+            // PWA安装提示
+            let deferredPrompt;
+            const installPrompt = document.getElementById('install-prompt');
+            const installBtn = document.getElementById('install-btn');
+            const installDismiss = document.getElementById('install-dismiss');
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                // 检查是否已经安装或已经显示过提示
+                if (!localStorage.getItem('install-dismissed')) {
+                    setTimeout(() => {
+                        installPrompt.style.display = 'block';
+                    }, 3000); // 3秒后显示安装提示
+                }
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`用户选择: ${outcome}`);
+                    deferredPrompt = null;
+                    installPrompt.style.display = 'none';
+                }
+            });
+
+            installDismiss.addEventListener('click', () => {
+                installPrompt.style.display = 'none';
+                localStorage.setItem('install-dismissed', 'true');
+            });
+
+            // Service Worker注册
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js')
+                        .then((registration) => {
+                            console.log('SW注册成功: ', registration.scope);
+                        })
+                        .catch((registrationError) => {
+                            console.log('SW注册失败: ', registrationError);
+                        });
+                });
+            }
+
+            // 检测是否在PWA模式下运行
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                document.body.classList.add('pwa-mode');
+                console.log('运行在PWA模式');
+            }
+        </script>
+</body>
+
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技能五子棋 - 测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .test-result { margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>技能五子棋 - 功能测试</h1>
+    
+    <div class="test-section">
+        <h2>基础组件测试</h2>
+        <button onclick="testBoardManager()">测试棋盘管理器</button>
+        <button onclick="testWinChecker()">测试胜负判定</button>
+        <button onclick="testGameHistory()">测试历史管理</button>
+        <div id="basic-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>技能系统测试</h2>
+        <button onclick="testSkillSystem()">测试技能系统</button>
+        <div id="skill-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>AI服务测试</h2>
+        <button onclick="testAIService()">测试AI连接</button>
+        <div id="ai-tests"></div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/BoardManager.js"></script>
+    <script src="js/WinChecker.js"></script>
+    <script src="js/GameHistoryManager.js"></script>
+    <script src="js/SkillSystem.js"></script>
+    <script src="js/AIService.js"></script>
+    
+    <script>
+        function log(message, isError = false) {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `test-result ${isError ? 'error' : 'success'}`;
+            div.textContent = message;
+            return div;
+        }
+
+        function testBoardManager() {
+            const container = document.getElementById('basic-tests');
+            container.innerHTML = '<h3>棋盘管理器测试结果:</h3>';
+            
+            try {
+                const board = new BoardManager();
+                container.appendChild(log('✓ 棋盘管理器创建成功'));
+                
+                // 测试落子
+                const success = board.placePiece(7, 7, GameConfig.PLAYER.HUMAN);
+                if (success) {
+                    container.appendChild(log('✓ 落子功能正常'));
+                } else {
+                    container.appendChild(log('✗ 落子功能失败', true));
+                }
+                
+                // 测试获取棋子
+                const piece = board.getPiece(7, 7);
+                if (piece === GameConfig.PLAYER.HUMAN) {
+                    container.appendChild(log('✓ 获取棋子功能正常'));
+                } else {
+                    container.appendChild(log('✗ 获取棋子功能失败', true));
+                }
+                
+                // 测试空位检查
+                if (!board.isEmpty(7, 7) && board.isEmpty(0, 0)) {
+                    container.appendChild(log('✓ 空位检查功能正常'));
+                } else {
+                    container.appendChild(log('✗ 空位检查功能失败', true));
+                }
+                
+            } catch (error) {
+                container.appendChild(log('✗ 棋盘管理器测试失败: ' + error.message, true));
+            }
+        }
+
+        function testWinChecker() {
+            const container = document.getElementById('basic-tests');
+            
+            try {
+                const board = new BoardManager();
+                
+                // 创建水平五连
+                for (let i = 0; i < 5; i++) {
+                    board.placePiece(7, i, GameConfig.PLAYER.HUMAN);
+                }
+                
+                const winner = WinChecker.checkWin(board, {x: 7, y: 4, player: GameConfig.PLAYER.HUMAN});
+                if (winner === GameConfig.PLAYER.HUMAN) {
+                    container.appendChild(log('✓ 胜负判定功能正常'));
+                } else {
+                    container.appendChild(log('✗ 胜负判定功能失败', true));
+                }
+                
+            } catch (error) {
+                container.appendChild(log('✗ 胜负判定测试失败: ' + error.message, true));
+            }
+        }
+
+        function testGameHistory() {
+            const container = document.getElementById('basic-tests');
+            
+            try {
+                const history = new GameHistoryManager();
+                
+                // 保存状态
+                history.saveState([[1, 0], [0, 2]], 1, {}, 1);
+                
+                if (history.getHistoryCount() === 1) {
+                    container.appendChild(log('✓ 历史管理功能正常'));
+                } else {
+                    container.appendChild(log('✗ 历史管理功能失败', true));
+                }
+                
+            } catch (error) {
+                container.appendChild(log('✗ 历史管理测试失败: ' + error.message, true));
+            }
+        }
+
+        function testSkillSystem() {
+            const container = document.getElementById('skill-tests');
+            container.innerHTML = '<h3>技能系统测试结果:</h3>';
+            
+            try {
+                // 创建模拟游戏控制器
+                const mockController = {
+                    boardManager: new BoardManager(),
+                    historyManager: new GameHistoryManager(),
+                    gameUI: { redraw: () => {}, enterSelectionMode: () => {}, exitSelectionMode: () => {} },
+                    gameStatus: GameConfig.GAME_STATUS.PLAYING
+                };
+                
+                const skillSystem = new SkillSystem(mockController);
+                container.appendChild(log('✓ 技能系统创建成功'));
+                
+                // 测试技能可用性检查
+                const canUse = skillSystem.canUseSkill('flyingSand', GameConfig.PLAYER.HUMAN);
+                if (canUse) {
+                    container.appendChild(log('✓ 技能可用性检查正常'));
+                } else {
+                    container.appendChild(log('✗ 技能可用性检查失败', true));
+                }
+                
+                // 测试获取可用技能
+                const availableSkills = skillSystem.getAvailableSkills(GameConfig.PLAYER.HUMAN);
+                if (availableSkills.length === 3) {
+                    container.appendChild(log('✓ 获取可用技能功能正常'));
+                } else {
+                    container.appendChild(log('✗ 获取可用技能功能失败', true));
+                }
+                
+            } catch (error) {
+                container.appendChild(log('✗ 技能系统测试失败: ' + error.message, true));
+            }
+        }
+
+        async function testAIService() {
+            const container = document.getElementById('ai-tests');
+            container.innerHTML = '<h3>AI服务测试结果:</h3>';
+            
+            try {
+                const aiService = new AIService();
+                container.appendChild(log('✓ AI服务创建成功'));
+                
+                // 测试状态获取
+                const status = aiService.getStatus();
+                if (status.hasApiKey) {
+                    container.appendChild(log('✓ API密钥配置正常'));
+                } else {
+                    container.appendChild(log('✗ API密钥未配置', true));
+                }
+                
+                // 测试棋盘格式化
+                const board = Array(15).fill().map(() => Array(15).fill(0));
+                board[7][7] = 1;
+                board[7][8] = 2;
+                
+                const formatted = aiService.formatBoardForAI(board);
+                if (formatted.includes('1') && formatted.includes('2')) {
+                    container.appendChild(log('✓ 棋盘格式化功能正常'));
+                } else {
+                    container.appendChild(log('✗ 棋盘格式化功能失败', true));
+                }
+                
+                // 测试后备AI
+                const fallbackMove = aiService.getFallbackMove(board);
+                if (fallbackMove.x >= 0 && fallbackMove.x < 15 && fallbackMove.y >= 0 && fallbackMove.y < 15) {
+                    container.appendChild(log('✓ 后备AI功能正常'));
+                } else {
+                    container.appendChild(log('✗ 后备AI功能失败', true));
+                }
+                
+            } catch (error) {
+                container.appendChild(log('✗ AI服务测试失败: ' + error.message, true));
+            }
+        }
+    </script>
+</body>
+</html>

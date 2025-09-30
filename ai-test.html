@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI测试 - 技能五子棋</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        .test-result { 
+            margin: 10px 0; 
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .board-display {
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.2;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .difficulty-selector {
+            margin: 10px 0;
+        }
+        .difficulty-selector select {
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🤖 AI智能测试</h1>
+        
+        <div class="test-section">
+            <h2>AI难度设置</h2>
+            <div class="difficulty-selector">
+                <label>选择AI难度：</label>
+                <select id="difficulty-select">
+                    <option value="easy">简单 - AI会犯错，防守较弱</option>
+                    <option value="normal" selected>普通 - 平衡的攻防</option>
+                    <option value="hard">困难 - 强力防守和攻击</option>
+                </select>
+                <button onclick="updateAIDifficulty()">应用设置</button>
+            </div>
+            <div id="difficulty-result" class="test-result info" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>防守能力测试</h2>
+            <p>测试AI是否能识别并阻止玩家的获胜威胁</p>
+            <button onclick="testDefense()">测试防守能力</button>
+            <div id="defense-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>攻击能力测试</h2>
+            <p>测试AI是否能识别并利用攻击机会</p>
+            <button onclick="testAttack()">测试攻击能力</button>
+            <div id="attack-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>实时对战测试</h2>
+            <p>与AI进行实时对战，观察其表现</p>
+            <button onclick="startRealTimeTest()">开始对战测试</button>
+            <div id="realtime-test"></div>
+        </div>
+    </div>
+
+    <!-- 加载必要的脚本 -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/SmartAI.js"></script>
+    
+    <script>
+        function log(message, isError = false, containerId = 'test-results') {
+            console.log(message);
+            const container = document.getElementById(containerId);
+            if (container) {
+                const div = document.createElement('div');
+                div.className = `test-result ${isError ? 'error' : 'success'}`;
+                div.textContent = message;
+                container.appendChild(div);
+            }
+        }
+
+        function updateAIDifficulty() {
+            const difficulty = document.getElementById('difficulty-select').value;
+            if (window.smartAI) {
+                window.smartAI.setDifficulty(difficulty);
+                const resultDiv = document.getElementById('difficulty-result');
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = `AI难度已设置为: ${difficulty}`;
+                log(`AI难度已更新为: ${difficulty}`, false, 'difficulty-result');
+            }
+        }
+
+        function createTestBoard() {
+            // 创建15x15的空棋盘
+            const board = [];
+            for (let i = 0; i < 15; i++) {
+                board[i] = [];
+                for (let j = 0; j < 15; j++) {
+                    board[i][j] = 0;
+                }
+            }
+            return board;
+        }
+
+        function displayBoard(board, title = '') {
+            let display = title ? `${title}\n` : '';
+            display += '   ';
+            for (let i = 0; i < 15; i++) {
+                display += i.toString().padStart(2, ' ');
+            }
+            display += '\n';
+
+            for (let x = 0; x < 15; x++) {
+                display += x.toString().padStart(2, ' ') + ' ';
+                for (let y = 0; y < 15; y++) {
+                    const piece = board[x][y];
+                    const symbol = piece === 0 ? '·' : (piece === 1 ? '●' : '○');
+                    display += symbol.padStart(2, ' ');
+                }
+                display += '\n';
+            }
+            return display;
+        }
+
+        function testDefense() {
+            const container = document.getElementById('defense-tests');
+            container.innerHTML = '<h3>防守测试结果：</h3>';
+
+            // 测试场景1：阻止玩家四连获胜
+            const board1 = createTestBoard();
+            // 玩家有四连，AI需要阻止
+            board1[7][5] = 1; // 玩家
+            board1[7][6] = 1; // 玩家
+            board1[7][7] = 1; // 玩家
+            board1[7][8] = 1; // 玩家
+            // 位置[7][9]和[7][4]是关键防守点
+
+            const move1 = window.smartAI.getBestMove(board1, 2, 1);
+            const isDefenseCorrect1 = (move1.x === 7 && (move1.y === 4 || move1.y === 9));
+            
+            const boardDisplay1 = document.createElement('div');
+            boardDisplay1.className = 'board-display';
+            boardDisplay1.textContent = displayBoard(board1, '测试1: 阻止玩家四连获胜');
+            container.appendChild(boardDisplay1);
+
+            log(`测试1 - AI选择: (${move1.x}, ${move1.y}) 理由: ${move1.reasoning}`, !isDefenseCorrect1, 'defense-tests');
+            log(`测试1结果: ${isDefenseCorrect1 ? '✅ 正确防守' : '❌ 防守失败'}`, !isDefenseCorrect1, 'defense-tests');
+
+            // 测试场景2：阻止玩家三连威胁
+            const board2 = createTestBoard();
+            board2[8][6] = 1; // 玩家
+            board2[8][7] = 1; // 玩家
+            board2[8][8] = 1; // 玩家
+            // 需要防守[8][5]或[8][9]
+
+            const move2 = window.smartAI.getBestMove(board2, 2, 1);
+            const isDefenseCorrect2 = (move2.x === 8 && (move2.y === 5 || move2.y === 9));
+
+            const boardDisplay2 = document.createElement('div');
+            boardDisplay2.className = 'board-display';
+            boardDisplay2.textContent = displayBoard(board2, '测试2: 阻止玩家三连威胁');
+            container.appendChild(boardDisplay2);
+
+            log(`测试2 - AI选择: (${move2.x}, ${move2.y}) 理由: ${move2.reasoning}`, !isDefenseCorrect2, 'defense-tests');
+            log(`测试2结果: ${isDefenseCorrect2 ? '✅ 正确防守' : '❌ 防守失败'}`, !isDefenseCorrect2, 'defense-tests');
+        }
+
+        function testAttack() {
+            const container = document.getElementById('attack-tests');
+            container.innerHTML = '<h3>攻击测试结果：</h3>';
+
+            // 测试场景1：AI能直接获胜
+            const board1 = createTestBoard();
+            board1[7][5] = 2; // AI
+            board1[7][6] = 2; // AI
+            board1[7][7] = 2; // AI
+            board1[7][8] = 2; // AI
+            // AI应该选择[7][4]或[7][9]获胜
+
+            const move1 = window.smartAI.getBestMove(board1, 2, 1);
+            const isAttackCorrect1 = (move1.x === 7 && (move1.y === 4 || move1.y === 9));
+
+            const boardDisplay1 = document.createElement('div');
+            boardDisplay1.className = 'board-display';
+            boardDisplay1.textContent = displayBoard(board1, '测试1: AI直接获胜机会');
+            container.appendChild(boardDisplay1);
+
+            log(`测试1 - AI选择: (${move1.x}, ${move1.y}) 理由: ${move1.reasoning}`, !isAttackCorrect1, 'attack-tests');
+            log(`测试1结果: ${isAttackCorrect1 ? '✅ 正确攻击' : '❌ 攻击失败'}`, !isAttackCorrect1, 'attack-tests');
+
+            // 测试场景2：AI形成四连威胁
+            const board2 = createTestBoard();
+            board2[8][6] = 2; // AI
+            board2[8][7] = 2; // AI
+            board2[8][8] = 2; // AI
+            // AI应该选择[8][5]或[8][9]形成四连
+
+            const move2 = window.smartAI.getBestMove(board2, 2, 1);
+            const isAttackCorrect2 = (move2.x === 8 && (move2.y === 5 || move2.y === 9));
+
+            const boardDisplay2 = document.createElement('div');
+            boardDisplay2.className = 'board-display';
+            boardDisplay2.textContent = displayBoard(board2, '测试2: AI形成四连威胁');
+            container.appendChild(boardDisplay2);
+
+            log(`测试2 - AI选择: (${move2.x}, ${move2.y}) 理由: ${move2.reasoning}`, !isAttackCorrect2, 'attack-tests');
+            log(`测试2结果: ${isAttackCorrect2 ? '✅ 正确攻击' : '❌ 攻击失败'}`, !isAttackCorrect2, 'attack-tests');
+        }
+
+        function startRealTimeTest() {
+            const container = document.getElementById('realtime-test');
+            container.innerHTML = '<h3>实时对战测试：</h3>';
+            
+            const board = createTestBoard();
+            let currentPlayer = 1; // 玩家先手
+            let moveCount = 0;
+
+            function makeMove(x, y) {
+                if (board[x][y] !== 0) return false;
+                
+                board[x][y] = currentPlayer;
+                moveCount++;
+                
+                // 显示棋盘
+                const boardDisplay = document.createElement('div');
+                boardDisplay.className = 'board-display';
+                boardDisplay.textContent = displayBoard(board, `第${moveCount}步 - ${currentPlayer === 1 ? '玩家' : 'AI'}落子(${x}, ${y})`);
+                container.appendChild(boardDisplay);
+                
+                // 检查获胜
+                if (checkWin(board, x, y, currentPlayer)) {
+                    log(`游戏结束！${currentPlayer === 1 ? '玩家' : 'AI'}获胜！`, false, 'realtime-test');
+                    return true;
+                }
+                
+                // 切换玩家
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+                
+                // 如果是AI回合
+                if (currentPlayer === 2) {
+                    setTimeout(() => {
+                        const aiMove = window.smartAI.getBestMove(board, 2, 1);
+                        if (aiMove) {
+                            log(`AI思考结果: (${aiMove.x}, ${aiMove.y}) - ${aiMove.reasoning}`, false, 'realtime-test');
+                            makeMove(aiMove.x, aiMove.y);
+                        }
+                    }, 500);
+                }
+                
+                return false;
+            }
+
+            // 创建交互界面
+            const controlDiv = document.createElement('div');
+            controlDiv.innerHTML = `
+                <p>点击坐标进行落子（玩家先手）：</p>
+                <input type="number" id="move-x" placeholder="X坐标(0-14)" min="0" max="14" style="width:120px;">
+                <input type="number" id="move-y" placeholder="Y坐标(0-14)" min="0" max="14" style="width:120px;">
+                <button onclick="makePlayerMove()">落子</button>
+                <button onclick="startRealTimeTest()">重新开始</button>
+            `;
+            container.appendChild(controlDiv);
+
+            // 显示初始棋盘
+            const initialBoard = document.createElement('div');
+            initialBoard.className = 'board-display';
+            initialBoard.textContent = displayBoard(board, '初始棋盘 - 玩家先手');
+            container.appendChild(initialBoard);
+
+            // 全局函数供按钮调用
+            window.makePlayerMove = function() {
+                const x = parseInt(document.getElementById('move-x').value);
+                const y = parseInt(document.getElementById('move-y').value);
+                
+                if (isNaN(x) || isNaN(y) || x < 0 || x > 14 || y < 0 || y > 14) {
+                    alert('请输入有效的坐标 (0-14)');
+                    return;
+                }
+                
+                if (currentPlayer !== 1) {
+                    alert('请等待AI行动');
+                    return;
+                }
+                
+                if (board[x][y] !== 0) {
+                    alert('该位置已有棋子');
+                    return;
+                }
+                
+                makeMove(x, y);
+                
+                // 清空输入框
+                document.getElementById('move-x').value = '';
+                document.getElementById('move-y').value = '';
+            };
+        }
+
+        function checkWin(board, x, y, player) {
+            const directions = [[0,1], [1,0], [1,1], [1,-1]];
+            
+            for (const [dx, dy] of directions) {
+                let count = 1;
+                
+                // 正方向
+                for (let i = 1; i < 5; i++) {
+                    const nx = x + dx * i;
+                    const ny = y + dy * i;
+                    if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && board[nx][ny] === player) {
+                        count++;
+                    } else break;
+                }
+                
+                // 负方向
+                for (let i = 1; i < 5; i++) {
+                    const nx = x - dx * i;
+                    const ny = y - dy * i;
+                    if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && board[nx][ny] === player) {
+                        count++;
+                    } else break;
+                }
+                
+                if (count >= 5) return true;
+            }
+            
+            return false;
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('AI测试页面已加载');
+            if (window.smartAI) {
+                log('✅ 智能AI系统已加载', false, 'difficulty-result');
+                document.getElementById('difficulty-result').style.display = 'block';
+            } else {
+                log('❌ 智能AI系统加载失败', true, 'difficulty-result');
+                document.getElementById('difficulty-result').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

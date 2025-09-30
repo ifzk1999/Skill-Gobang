@@ -1,0 +1,33 @@
+{
+  "name": "技能五子棋",
+  "short_name": "五子棋",
+  "description": "具有特殊技能系统的创新五子棋游戏，支持与智能AI对战",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e3c72",
+  "theme_color": "#1e3c72",
+  "orientation": "portrait",
+  "scope": "./",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxZTNjNzIiLz4KPGNpcmNsZSBjeD0iNDgiIGN5PSI0OCIgcj0iOCIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSI5NiIgY3k9IjQ4IiByPSI4IiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjE0NCIgY3k9IjQ4IiByPSI4IiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjQ4IiBjeT0iOTYiIHI9IjgiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iOTYiIGN5PSI5NiIgcj0iOCIgZmlsbD0iI2ZmZDcwMCIvPgo8Y2lyY2xlIGN4PSIxNDQiIGN5PSI5NiIgcj0iOCIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSI0OCIgY3k9IjE0NCIgcj0iOCIgZmlsbD0iIzAwMDAwMCIvPgo8Y2lyY2xlIGN4PSI5NiIgY3k9IjE0NCIgcj0iOCIgZmlsbD0iIzAwMDAwMCIvPgo8Y2lyY2xlIGN4PSIxNDQiIGN5PSIxNDQiIHI9IjgiIGZpbGw9IiMwMDAwMDAiLz4KPHN2Zz4K",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMxZTNjNzIiLz4KPGNpcmNsZSBjeD0iMTI4IiBjeT0iMTI4IiByPSIyNCIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSIyNTYiIGN5PSIxMjgiIHI9IjI0IiBmaWxsPSIjZmZmZmZmIi8+CjxjaXJjbGUgY3g9IjM4NCIgY3k9IjEyOCIgcj0iMjQiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iMTI4IiBjeT0iMjU2IiByPSIyNCIgZmlsbD0iI2ZmZmZmZiIvPgo8Y2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI0IiBmaWxsPSIjZmZkNzAwIi8+CjxjaXJjbGUgY3g9IjM4NCIgY3k9IjI1NiIgcj0iMjQiIGZpbGw9IiNmZmZmZmYiLz4KPGNpcmNsZSBjeD0iMTI4IiBjeT0iMzg0IiByPSIyNCIgZmlsbD0iIzAwMDAwMCIvPgo8Y2lyY2xlIGN4PSIyNTYiIGN5PSIzODQiIHI9IjI0IiBmaWxsPSIjMDAwMDAwIi8+CjxjaXJjbGUgY3g9IjM4NCIgY3k9IjM4NCIgcj0iMjQiIGZpbGw9IiMwMDAwMDAiLz4KPHN2Zz4K",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIHZpZXdCb3g9IjAgMCAxMjgwIDcyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSJ1cmwoI2dyYWRpZW50KSIvPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMxZTNjNzIiLz4KPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMyYTUyOTgiLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMWUzYzcyIi8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPC9zdmc+",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ]
+}
