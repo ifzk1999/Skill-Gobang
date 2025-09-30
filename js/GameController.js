@@ -159,6 +159,13 @@ class GameController {
                             this.showAIThinking(false);
                             return;
                         }
+                        
+                        // 特殊处理：如果使用了时光倒流，游戏状态可能已经改变
+                        if (skillDecision.skillType === 'timeRewind') {
+                            this.showAIThinking(false);
+                            console.log('AI使用时光倒流，游戏状态已改变，结束当前AI回合');
+                            return; // 结束当前AI回合，让restoreGameState处理后续流程
+                        }
                     }
                 }
             }
@@ -383,7 +390,17 @@ class GameController {
         this.updateUI();
         this.gameUI.redraw();
         
-        console.log('游戏状态已恢复');
+        console.log('游戏状态已恢复，当前玩家:', this.currentPlayer);
+        
+        // 重要：恢复状态后需要继续游戏流程
+        // 如果当前是AI回合，需要触发AI行动
+        if (this.currentPlayer === GameConfig.PLAYER.AI && 
+            this.gameStatus === GameConfig.GAME_STATUS.PLAYING) {
+            // 延迟一下让动画完成，然后继续AI回合
+            setTimeout(() => {
+                this.handleAITurn();
+            }, 500);
+        }
     }
 
     /**

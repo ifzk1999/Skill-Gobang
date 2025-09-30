@@ -177,7 +177,7 @@ python -m http.server 8000
 
 - 项目地址：[GitHub](https://github.com/your-username/技能五子棋)
 - 问题反馈：[Issues](https://github.com/your-username/技能五子棋/issues)
-- 邮箱：your-email@example.com
+- 邮箱：1205792357@qq.com
 
 ---
 
