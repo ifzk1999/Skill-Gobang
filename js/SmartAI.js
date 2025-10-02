@@ -136,6 +136,13 @@ class SmartAI {
                 return blockMove;
             }
 
+            // 紧急防守：检测对手已成型的“活三”窗口（0 1 1 1 0），含斜线
+            const openThreeBlock = this.findOpenThreeBlockMove(boardState, humanPlayer);
+            if (openThreeBlock) {
+                openThreeBlock.reasoning = '必防：对手已成型活三窗口';
+                return openThreeBlock;
+            }
+
             // 活四/活三必防：如果对手在任一空位落子能形成活四或活三，立即在该点封堵
             const urgentDefense = this.findImmediateDefenseMove(boardState, humanPlayer);
             if (urgentDefense) {
@@ -273,6 +280,45 @@ class SmartAI {
             }
             if (hasOpenThree) {
                 return { x: pos.x, y: pos.y, type: 'openThree', score: (this.SCORES && this.SCORES.BLOCK_THREE) ? this.SCORES.BLOCK_THREE : 80000 };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 扫描棋盘寻找已存在的“活三”窗口(0 1 1 1 0)并返回任一端的封堵点
+     * 检测四个方向，覆盖斜线
+     */
+    findOpenThreeBlockMove(boardState, humanPlayer) {
+        const directions = this.DIRECTIONS; // [ [0,1], [1,0], [1,1], [1,-1] ]
+        const size = 15;
+        const opponent = humanPlayer;
+
+        for (let x = 0; x < size; x++) {
+            for (let y = 0; y < size; y++) {
+                for (const [dx, dy] of directions) {
+                    // 以(x,y)为窗口起点，检查5连窗口
+                    const cells = [];
+                    let inBounds = true;
+                    for (let k = 0; k < 5; k++) {
+                        const nx = x + dx * k;
+                        const ny = y + dy * k;
+                        if (nx < 0 || nx >= size || ny < 0 || ny >= size) { inBounds = false; break; }
+                        cells.push({ x: nx, y: ny, v: boardState[nx][ny] });
+                    }
+                    if (!inBounds) continue;
+                    // 匹配 0 1 1 1 0 模式
+                    if (cells[0].v === 0 && cells[1].v === opponent && cells[2].v === opponent && cells[3].v === opponent && cells[4].v === 0) {
+                        // 返回任一端的封堵点（优先更靠近中心）
+                        const c1 = cells[0];
+                        const c2 = cells[4];
+                        const center = { x: 7, y: 7 };
+                        const d1 = Math.abs(c1.x - center.x) + Math.abs(c1.y - center.y);
+                        const d2 = Math.abs(c2.x - center.x) + Math.abs(c2.y - center.y);
+                        const block = d1 <= d2 ? c1 : c2;
+                        return { x: block.x, y: block.y, score: (this.SCORES && this.SCORES.BLOCK_THREE) ? this.SCORES.BLOCK_THREE : 90000 };
+                    }
+                }
             }
         }
         return null;
