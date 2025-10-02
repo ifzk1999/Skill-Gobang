@@ -707,7 +707,9 @@ class SmartAI {
         
         // 判断是否为活线
         const isActiveFour = (count === 4) && !leftBlocked && !rightBlocked;
-        const isActiveThree = (count === 3) && !leftBlocked && !rightBlocked && (leftEmpty > 0 || rightEmpty > 0);
+        // 活三（含对角线）：两端都开放（不被阻断）且两侧均存在空间
+        // 注：这里不区分跳三/眠三的更细粒度情况，重点保证对斜向活三也触发防守
+        const isActiveThree = (count === 3) && !leftBlocked && !rightBlocked && (leftEmpty > 0) && (rightEmpty > 0);
         
         return {
             count,
