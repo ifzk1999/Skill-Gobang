@@ -1,5 +1,5 @@
 // Service Worker for 技能五子棋
-const CACHE_NAME = 'gomoku-skills-v1.0.0';
+const CACHE_NAME = 'gomoku-skills-2025-10-03';
 const urlsToCache = [
     './',
     './index.html',
@@ -63,38 +63,33 @@ self.addEventListener('activate', (event) => {
 
 // 拦截网络请求
 self.addEventListener('fetch', (event) => {
+    const req = event.request;
+
+    // 对 HTML 文档采用网络优先策略，确保页面总是最新
+    if (req.mode === 'navigate' || req.destination === 'document') {
+        event.respondWith(
+            fetch(req)
+                .then((networkResp) => {
+                    const copy = networkResp.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+                    return networkResp;
+                })
+                .catch(() => caches.match('./index.html'))
+        );
+        return;
+    }
+
+    // 其他资源采用缓存优先，网络回填
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // 如果缓存中有，直接返回
-                if (response) {
-                    return response;
-                }
-
-                // 否则发起网络请求
-                return fetch(event.request).then((response) => {
-                    // 检查是否是有效响应
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
-                    }
-
-                    // 克隆响应，因为响应流只能使用一次
-                    const responseToCache = response.clone();
-
-                    // 将新资源添加到缓存
-                    caches.open(CACHE_NAME)
-                        .then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
-
-                    return response;
-                }).catch(() => {
-                    // 网络请求失败，返回离线页面或默认响应
-                    if (event.request.destination === 'document') {
-                        return caches.match('./index.html');
-                    }
-                });
-            })
+        caches.match(req).then((cached) => {
+            if (cached) return cached;
+            return fetch(req).then((resp) => {
+                if (!resp || resp.status !== 200 || resp.type !== 'basic') return resp;
+                const copy = resp.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+                return resp;
+            });
+        })
     );
 });
 

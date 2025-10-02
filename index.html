@@ -174,16 +174,35 @@
                 localStorage.setItem('install-dismissed', 'true');
             });
 
-            // Service Worker注册
+            // Service Worker注册 + 自动更新，无需手动清缓存
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./sw.js')
-                        .then((registration) => {
-                            console.log('SW注册成功: ', registration.scope);
-                        })
-                        .catch((registrationError) => {
-                            console.log('SW注册失败: ', registrationError);
+                    navigator.serviceWorker.register('./sw.js').then((registration) => {
+                        console.log('SW注册成功: ', registration.scope);
+
+                        // 若已存在等待中的新SW，直接跳过等待
+                        if (registration.waiting) {
+                            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        }
+
+                        // 监听更新安装
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker && newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                }
+                            });
                         });
+                    }).catch((err) => {
+                        console.log('SW注册失败: ', err);
+                    });
+
+                    // 当控制权切换到新SW时自动刷新页面
+                    let refreshing = false;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (refreshing) return; refreshing = true; location.reload();
+                    });
                 });
             }
 
