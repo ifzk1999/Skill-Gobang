@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI训练中心 - 技能五子棋</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .training-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .training-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .training-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .training-panel {
+            background: rgba(30, 60, 114, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .training-panel h3 {
+            color: #ffd700;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            color: #e8f4fd;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e8f4fd;
+            font-size: 14px;
+        }
+        
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+        
+        .training-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .training-btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            color: white;
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #1e3c72;
+        }
+        
+        .btn-evaluate {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+        }
+        
+        .training-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .training-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #e8f4fd;
+            font-size: 0.9rem;
+        }
+        
+        .progress-container {
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            color: #e8f4fd;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .log-entry {
+            color: #e8f4fd;
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.success {
+            color: #4ade80;
+        }
+        
+        .log-entry.warning {
+            color: #fbbf24;
+        }
+        
+        .log-entry.error {
+            color: #f87171;
+        }
+        
+        .log-entry.info {
+            color: #60a5fa;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e8f4fd;
+        }
+        
+        @media (max-width: 768px) {
+            .training-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .training-buttons {
+                flex-direction: column;
+            }
+            
+            .training-btn {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="training-container">
+        <header class="training-header">
+            <h1>🧠 AI训练中心</h1>
+            <p>通过强化学习让AI不断进化</p>
+        </header>
+
+        <div class="training-grid">
+            <!-- 训练控制面板 -->
+            <div class="training-panel">
+                <h3>🎮 训练控制</h3>
+                
+                <div class="control-group">
+                    <label for="training-sessions">训练周期数</label>
+                    <input type="number" id="training-sessions" value="10" min="1" max="1000">
+                </div>
+                
+                <div class="control-group">
+                    <label for="games-per-session">每周期游戏数</label>
+                    <input type="number" id="games-per-session" value="100" min="10" max="1000">
+                </div>
+                
+                <div class="control-group">
+                    <label for="learning-rate">学习率</label>
+                    <input type="number" id="learning-rate" value="0.1" min="0.001" max="1" step="0.001">
+                </div>
+                
+                <div class="control-group">
+                    <label for="exploration-rate">探索率</label>
+                    <input type="number" id="exploration-rate" value="0.1" min="0" max="1" step="0.01">
+                </div>
+                
+                <div class="training-buttons">
+                    <button class="training-btn btn-start" id="start-training">开始训练</button>
+                    <button class="training-btn btn-stop" id="stop-training" disabled>停止训练</button>
+                    <button class="training-btn btn-reset" id="reset-training">重置数据</button>
+                    <button class="training-btn btn-evaluate" id="evaluate-ai">评估AI</button>
+                </div>
+            </div>
+
+            <!-- 训练统计面板 -->
+            <div class="training-panel">
+                <h3>📊 训练统计</h3>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="games-played">0</div>
+                        <div class="stat-label">已训练游戏</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="win-rate">0%</div>
+                        <div class="stat-label">胜率</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avg-game-length">0</div>
+                        <div class="stat-label">平均游戏长度</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="exploration-current">10%</div>
+                        <div class="stat-label">当前探索率</div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="training-progress"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">等待开始训练...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 进度图表 -->
+        <div class="training-panel">
+            <h3>📈 学习曲线</h3>
+            <div class="chart-container" id="learning-curve">
+                <p>训练开始后将显示学习曲线图</p>
+            </div>
+        </div>
+
+        <!-- 训练日志 -->
+        <div class="training-panel">
+            <h3>📝 训练日志</h3>
+            <div class="log-container" id="training-log">
+                <div class="log-entry info">[系统] AI训练中心已就绪</div>
+                <div class="log-entry info">[提示] 点击"开始训练"开始强化学习</div>
+            </div>
+        </div>
+
+        <!-- 返回游戏 -->
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="index.html" class="btn btn-primary">🎯 返回游戏</a>
+        </div>
+    </div>
+
+    <!-- 引入必要的脚本 -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/BoardManager.js"></script>
+    <script src="js/WinChecker.js"></script>
+    <script src="js/ReinforcementLearning.js"></script>
+    
+    <script>
+        // 训练界面控制逻辑
+        class TrainingUI {
+            constructor() {
+                this.isTraining = false;
+                this.currentSession = 0;
+                this.totalSessions = 0;
+                this.rl = window.reinforcementLearning;
+                
+                this.initializeUI();
+                this.updateStats();
+            }
+
+            initializeUI() {
+                // 绑定按钮事件
+                document.getElementById('start-training').addEventListener('click', () => this.startTraining());
+                document.getElementById('stop-training').addEventListener('click', () => this.stopTraining());
+                document.getElementById('reset-training').addEventListener('click', () => this.resetTraining());
+                document.getElementById('evaluate-ai').addEventListener('click', () => this.evaluateAI());
+                
+                // 绑定参数更新事件
+                document.getElementById('learning-rate').addEventListener('change', (e) => {
+                    this.rl.learningRate = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('exploration-rate').addEventListener('change', (e) => {
+                    this.rl.explorationRate = parseFloat(e.target.value);
+                });
+            }
+
+            async startTraining() {
+                if (this.isTraining) return;
+                
+                this.isTraining = true;
+                this.totalSessions = parseInt(document.getElementById('training-sessions').value);
+                this.currentSession = 0;
+                
+                // 更新UI状态
+                document.getElementById('start-training').disabled = true;
+                document.getElementById('stop-training').disabled = false;
+                
+                // 更新强化学习参数
+                this.rl.selfPlayConfig.gamesPerSession = parseInt(document.getElementById('games-per-session').value);
+                
+                this.log('开始强化学习训练...', 'success');
+                
+                try {
+                    for (let session = 0; session < this.totalSessions && this.isTraining; session++) {
+                        this.currentSession = session + 1;
+                        this.updateProgress();
+                        
+                        this.log(`开始训练周期 ${this.currentSession}/${this.totalSessions}`, 'info');
+                        
+                        // 运行训练周期
+                        await this.rl.runSelfPlaySession();
+                        this.rl.learnFromExperience();
+                        
+                        // 更新统计
+                        this.updateStats();
+                        
+                        // 定期评估
+                        if (session % 5 === 0) {
+                            await this.rl.evaluateProgress();
+                            this.updateStats();
+                        }
+                        
+                        // 让UI有时间更新
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    if (this.isTraining) {
+                        this.log('训练完成！', 'success');
+                        this.rl.saveTrainingData();
+                    }
+                } catch (error) {
+                    this.log(`训练出错: ${error.message}`, 'error');
+                } finally {
+                    this.stopTraining();
+                }
+            }
+
+            stopTraining() {
+                this.isTraining = false;
+                document.getElementById('start-training').disabled = false;
+                document.getElementById('stop-training').disabled = true;
+                
+                if (this.currentSession > 0) {
+                    this.log('训练已停止', 'warning');
+                }
+            }
+
+            resetTraining() {
+                if (this.isTraining) {
+                    this.stopTraining();
+                }
+                
+                this.rl.resetTraining();
+                this.updateStats();
+                this.updateProgress(0);
+                this.log('训练数据已重置', 'warning');
+            }
+
+            async evaluateAI() {
+                this.log('开始评估AI水平...', 'info');
+                
+                try {
+                    const winRate = await this.rl.evaluateProgress();
+                    this.updateStats();
+                    this.log(`评估完成，当前胜率: ${(winRate * 100).toFixed(1)}%`, 'success');
+                } catch (error) {
+                    this.log(`评估失败: ${error.message}`, 'error');
+                }
+            }
+
+            updateStats() {
+                const stats = this.rl.getTrainingStats();
+                
+                document.getElementById('games-played').textContent = stats.gamesPlayed.toLocaleString();
+                document.getElementById('win-rate').textContent = `${(stats.winRate * 100).toFixed(1)}%`;
+                document.getElementById('avg-game-length').textContent = Math.round(stats.averageGameLength);
+                document.getElementById('exploration-current').textContent = `${(stats.explorationRate * 100).toFixed(1)}%`;
+            }
+
+            updateProgress(progress) {
+                if (progress === undefined) {
+                    progress = this.totalSessions > 0 ? (this.currentSession / this.totalSessions) * 100 : 0;
+                }
+                
+                document.getElementById('training-progress').style.width = `${progress}%`;
+                document.getElementById('progress-text').textContent = 
+                    this.isTraining ? 
+                    `训练进度: ${this.currentSession}/${this.totalSessions} (${progress.toFixed(1)}%)` :
+                    progress === 0 ? '等待开始训练...' : '训练已完成';
+            }
+
+            log(message, type = 'info') {
+                const logContainer = document.getElementById('training-log');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // 限制日志条数
+                const entries = logContainer.querySelectorAll('.log-entry');
+                if (entries.length > 100) {
+                    entries[0].remove();
+                }
+            }
+        }
+
+        // 初始化训练界面
+        const trainingUI = new TrainingUI();
+        
+        // 定期更新统计
+        setInterval(() => {
+            if (!trainingUI.isTraining) {
+                trainingUI.updateStats();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
