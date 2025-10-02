@@ -55,9 +55,9 @@ class SmartAI {
                 mistake: 0.05    // 5%概率犯错
             },
             hard: {
-                defense: 3.0,    // 防守能力大幅增强
-                attack: 2.5,     // 攻击能力大幅增强
-                mistake: 0.001   // 0.1%概率犯错，几乎完美
+                defense: 5.0,    // 防守能力极大增强
+                attack: 4.0,     // 攻击能力极大增强
+                mistake: 0.0001  // 0.01%概率犯错，近乎完美
             }
         };
 
@@ -80,22 +80,24 @@ class SmartAI {
         
         // 困难模式下的特殊增强
         if (this.difficulty === 'hard') {
-            // 大幅提升关键战术的权重
-            this.SCORES.WIN = this.BASE_SCORES.WIN * 2;
-            this.SCORES.BLOCK_WIN = Math.floor(this.BASE_SCORES.BLOCK_WIN * 5);  // 极其重视防守
-            this.SCORES.FOUR = Math.floor(this.BASE_SCORES.FOUR * 3);
-            this.SCORES.BLOCK_FOUR = Math.floor(this.BASE_SCORES.BLOCK_FOUR * 4);
-            this.SCORES.THREE = Math.floor(this.BASE_SCORES.THREE * 2.5);
-            this.SCORES.BLOCK_THREE = Math.floor(this.BASE_SCORES.BLOCK_THREE * 3);
+            // 极大幅提升关键战术的权重
+            this.SCORES.WIN = this.BASE_SCORES.WIN * 3;
+            this.SCORES.BLOCK_WIN = Math.floor(this.BASE_SCORES.BLOCK_WIN * 10);  // 极其重视防守
+            this.SCORES.FOUR = Math.floor(this.BASE_SCORES.FOUR * 5);
+            this.SCORES.BLOCK_FOUR = Math.floor(this.BASE_SCORES.BLOCK_FOUR * 8);
+            this.SCORES.THREE = Math.floor(this.BASE_SCORES.THREE * 4);
+            this.SCORES.BLOCK_THREE = Math.floor(this.BASE_SCORES.BLOCK_THREE * 6);
+            this.SCORES.TWO = Math.floor(this.BASE_SCORES.TWO * 2);
+            this.SCORES.BLOCK_TWO = Math.floor(this.BASE_SCORES.BLOCK_TWO * 3);
             
             // 增加中心控制权重
-            this.SCORES.CENTER = this.BASE_SCORES.CENTER * 3;
+            this.SCORES.CENTER = this.BASE_SCORES.CENTER * 5;
             
             // 添加高级战术权重
-            this.SCORES.DOUBLE_THREE = 80000;  // 双三必胜
-            this.SCORES.FOUR_THREE = 90000;    // 四三必胜
-            this.SCORES.BLOCK_DOUBLE_THREE = 70000;  // 阻止对手双三
-            this.SCORES.BLOCK_FOUR_THREE = 85000;    // 阻止对手四三
+            this.SCORES.DOUBLE_THREE = 150000;  // 双三必胜
+            this.SCORES.FOUR_THREE = 200000;    // 四三必胜
+            this.SCORES.BLOCK_DOUBLE_THREE = 120000;  // 阻止对手双三
+            this.SCORES.BLOCK_FOUR_THREE = 180000;    // 阻止对手四三
         }
     }
 
@@ -116,6 +118,30 @@ class SmartAI {
         // 如果是开局，选择中心附近
         if (emptyPositions.length >= 220) { // 棋盘基本为空
             return this.getOpeningMove(boardState);
+        }
+        
+        // 困难模式下的特殊处理：优先检查必胜和必防
+        if (this.difficulty === 'hard') {
+            // 检查是否有直接获胜机会
+            const winMove = this.findWinningMove(boardState, aiPlayer);
+            if (winMove) {
+                winMove.reasoning = '发现获胜机会，直接获胜';
+                return winMove;
+            }
+            
+            // 检查是否需要阻止对手获胜
+            const blockMove = this.findWinningMove(boardState, humanPlayer);
+            if (blockMove) {
+                blockMove.reasoning = '阻止对手获胜';
+                return blockMove;
+            }
+            
+            // 检查高级战术机会（四三、双三）
+            const tacticMove = this.findAdvancedTacticMove(boardState, aiPlayer);
+            if (tacticMove) {
+                tacticMove.reasoning = `高级战术：${tacticMove.tacticType}`;
+                return tacticMove;
+            }
         }
 
         let bestMove = null;
@@ -419,6 +445,116 @@ class SmartAI {
      */
     isValidPosition(x, y, size) {
         return x >= 0 && x < size && y >= 0 && y < size;
+    }
+
+    /**
+     * 寻找获胜机会
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} player - 玩家标识
+     * @returns {Object|null} 获胜位置
+     */
+    findWinningMove(boardState, player) {
+        const emptyPositions = this.getEmptyPositions(boardState);
+        
+        for (const pos of emptyPositions) {
+            // 临时放置棋子
+            boardState[pos.x][pos.y] = player;
+            
+            // 检查是否获胜
+            if (this.checkWin(boardState, pos.x, pos.y, player)) {
+                boardState[pos.x][pos.y] = 0; // 恢复
+                return {
+                    x: pos.x,
+                    y: pos.y,
+                    score: this.SCORES.WIN
+                };
+            }
+            
+            boardState[pos.x][pos.y] = 0; // 恢复
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 检查是否获胜
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} x - x坐标
+     * @param {number} y - y坐标
+     * @param {number} player - 玩家标识
+     * @returns {boolean} 是否获胜
+     */
+    checkWin(boardState, x, y, player) {
+        for (const [dx, dy] of this.DIRECTIONS) {
+            let count = 1;
+            
+            // 向一个方向检查
+            for (let i = 1; i < 5; i++) {
+                const nx = x + dx * i;
+                const ny = y + dy * i;
+                if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && boardState[nx][ny] === player) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            
+            // 向相反方向检查
+            for (let i = 1; i < 5; i++) {
+                const nx = x - dx * i;
+                const ny = y - dy * i;
+                if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && boardState[nx][ny] === player) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            
+            if (count >= 5) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 寻找高级战术机会
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} player - 玩家标识
+     * @returns {Object|null} 战术位置
+     */
+    findAdvancedTacticMove(boardState, player) {
+        const emptyPositions = this.getEmptyPositions(boardState);
+        
+        for (const pos of emptyPositions) {
+            // 临时放置棋子
+            boardState[pos.x][pos.y] = player;
+            
+            const tacticsScore = this.checkAdvancedTactics(boardState, pos.x, pos.y, player);
+            
+            // 恢复
+            boardState[pos.x][pos.y] = 0;
+            
+            // 如果能形成四三或双三
+            if (tacticsScore >= (this.SCORES.DOUBLE_THREE || 80000)) {
+                let tacticType = '高级战术';
+                if (tacticsScore >= (this.SCORES.FOUR_THREE || 90000)) {
+                    tacticType = '四三必胜';
+                } else if (tacticsScore >= (this.SCORES.DOUBLE_THREE || 80000)) {
+                    tacticType = '双三必胜';
+                }
+                
+                return {
+                    x: pos.x,
+                    y: pos.y,
+                    score: tacticsScore,
+                    tacticType: tacticType
+                };
+            }
+        }
+        
+        return null;
     }
 
     /**

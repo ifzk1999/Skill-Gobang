@@ -85,9 +85,17 @@ class AIService {
         const moveCount = gameHistory.length;
         const pieceCount = this.countTotalPieces(boardState);
         
-        // 检查是否有紧急情况需要使用技能（最高优先级）
+        // 严格按照策略文档：开局阶段绝对不使用技能
+        if (moveCount < 10) {
+            return {
+                useSkill: false,
+                reasoning: '开局阶段，严格按照策略文档不使用任何技能'
+            };
+        }
+        
+        // 检查是否有紧急情况需要使用技能（仅在中后期）
         const urgentNeed = this.checkUrgentSkillNeed(boardState);
-        if (urgentNeed.urgent) {
+        if (urgentNeed.urgent && moveCount >= 15) {  // 只有中期以后才考虑紧急使用
             return {
                 useSkill: true,
                 skillType: urgentNeed.recommendedSkill,
@@ -98,18 +106,18 @@ class AIService {
         // 游戏阶段判断 - 更保守的策略
         let useChance = 0;
         
-        if (moveCount < 8) {
-            // 超早期：几乎不使用技能，让游戏自然发展
-            useChance = 0.05;
-        } else if (moveCount < 15) {
-            // 早期：很少使用，只在特殊情况下
-            useChance = 0.1;
-        } else if (moveCount < 25) {
-            // 中期：开始考虑使用技能
-            useChance = 0.25;
-        } else if (moveCount < 35) {
+        if (moveCount < 10) {
+            // 开局阶段：绝对不使用技能，严格按照策略文档执行
+            useChance = 0;
+        } else if (moveCount < 20) {
+            // 中盘前期：只在生死关头使用
+            useChance = 0.02;
+        } else if (moveCount < 30) {
+            // 中盘：开始考虑使用技能，但仍然谨慎
+            useChance = 0.15;
+        } else if (moveCount < 40) {
             // 中后期：更积极使用
-            useChance = 0.4;
+            useChance = 0.3;
         } else {
             // 后期：必要时使用
             useChance = 0.6;
