@@ -72,6 +72,16 @@ body::before {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    margin-bottom: 5px;
+}
+
+.version-info {
+    color: #ffd700;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    margin-bottom: 10px;
+    opacity: 0.9;
 }
 
 .game-status {
