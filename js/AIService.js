@@ -83,77 +83,58 @@ class AIService {
      */
     getRuleBasedSkillDecision(boardState, availableSkills, gameHistory, fallback = false) {
         const moveCount = gameHistory.length;
-        const pieceCount = this.countTotalPieces(boardState);
         
-        // 严格按照策略文档：开局阶段绝对不使用技能
-        if (moveCount < 10) {
+        // 【策略文档核心规则1】开局阶段：绝对不要使用任何技能
+        if (moveCount < 16) {  // 前8回合（16步）绝对不使用
             return {
                 useSkill: false,
-                reasoning: '开局阶段，严格按照策略文档不使用任何技能'
+                reasoning: '开局阶段，按策略文档绝对不使用技能'
             };
         }
         
-        // 检查是否有紧急情况需要使用技能（仅在中后期）
-        const urgentNeed = this.checkUrgentSkillNeed(boardState);
-        if (urgentNeed.urgent && moveCount >= 15) {  // 只有中期以后才考虑紧急使用
-            return {
-                useSkill: true,
-                skillType: urgentNeed.recommendedSkill,
-                reasoning: `紧急情况：${urgentNeed.reason}`
-            };
+        // 【策略文档核心规则2】分析当前局势和威胁
+        const threatAnalysis = this.analyzeGameSituation(boardState, moveCount);
+        
+        // 【时光倒流】最高优先级 - 精确的"否定权"
+        if (availableSkills.includes('timeRewind')) {
+            const timeRewindDecision = this.shouldUseTimeRewind(threatAnalysis);
+            if (timeRewindDecision.use) {
+                return {
+                    useSkill: true,
+                    skillType: 'timeRewind',
+                    reasoning: timeRewindDecision.reason
+                };
+            }
         }
         
-        // 游戏阶段判断 - 更保守的策略
-        let useChance = 0;
-        
-        if (moveCount < 10) {
-            // 开局阶段：绝对不使用技能，严格按照策略文档执行
-            useChance = 0;
-        } else if (moveCount < 20) {
-            // 中盘前期：只在生死关头使用
-            useChance = 0.02;
-        } else if (moveCount < 30) {
-            // 中盘：开始考虑使用技能，但仍然谨慎
-            useChance = 0.15;
-        } else if (moveCount < 40) {
-            // 中后期：更积极使用
-            useChance = 0.3;
-        } else {
-            // 后期：必要时使用
-            useChance = 0.6;
+        // 【力拔山兮】高风险搅局技能 - 只在劣势时使用
+        if (availableSkills.includes('mountainMover')) {
+            const mountainMoverDecision = this.shouldUseMountainMover(threatAnalysis);
+            if (mountainMoverDecision.use) {
+                return {
+                    useSkill: true,
+                    skillType: 'mountainMover',
+                    reasoning: mountainMoverDecision.reason
+                };
+            }
         }
         
-        // 根据棋盘复杂度调整
-        const complexity = this.getBoardComplexity(boardState);
-        if (complexity.hasThreats) {
-            useChance += 0.3; // 有威胁时更倾向使用技能
-        }
-        if (complexity.isStalemate) {
-            useChance += 0.2; // 僵局时考虑使用技能打破
-        }
-        
-        // 如果是后备决策，适度提高概率
-        if (fallback) {
-            useChance += 0.2;
+        // 【飞沙走石】终极绝望选择 - 最后的希望
+        if (availableSkills.includes('flyingSand')) {
+            const flyingSandDecision = this.shouldUseFlySand(threatAnalysis);
+            if (flyingSandDecision.use) {
+                return {
+                    useSkill: true,
+                    skillType: 'flyingSand',
+                    reasoning: flyingSandDecision.reason
+                };
+            }
         }
         
-        // 技能价值评估 - 只在有价值时使用
-        const skillValue = this.evaluateSkillValue(boardState, availableSkills);
-        if (skillValue.maxValue < 0.3) {
-            useChance *= 0.5; // 技能价值低时降低使用概率
-        }
-        
-        // 随机决策
-        if (Math.random() < useChance) {
-            const selectedSkill = this.selectBestSkillForSituation(boardState, availableSkills);
-            return {
-                useSkill: true,
-                skillType: selectedSkill.skill,
-                reasoning: selectedSkill.reason
-            };
-        }
-        
-        return { useSkill: false };
+        return {
+            useSkill: false,
+            reasoning: '当前局面不符合策略文档中任何技能使用条件'
+        };
     }
 
     /**
@@ -943,5 +924,163 @@ ${availableSkillsDesc}
             maxRetries: this.maxRetries,
             timeout: this.timeout
         };
+    }
+
+    /**
+     * 分析游戏局势
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} moveCount - 步数
+     * @returns {Object} 局势分析结果
+     */
+    analyzeGameSituation(boardState, moveCount) {
+        const aiThreats = this.countConsecutivePieces(boardState, GameConfig.PLAYER.AI);
+        const humanThreats = this.countConsecutivePieces(boardState, GameConfig.PLAYER.HUMAN);
+        
+        // 判断游戏阶段
+        let gamePhase = 'opening';
+        if (moveCount >= 16 && moveCount < 30) gamePhase = 'middle';
+        else if (moveCount >= 30) gamePhase = 'endgame';
+        
+        // 判断优劣势
+        let advantage = 'neutral';
+        if (humanThreats.maxConsecutive >= 3 || humanThreats.twoInARow >= 2) {
+            advantage = 'disadvantage'; // AI劣势
+        } else if (aiThreats.maxConsecutive >= 3 || aiThreats.twoInARow >= 2) {
+            advantage = 'advantage'; // AI优势
+        }
+        
+        // 检测紧急威胁
+        const emergencyThreats = {
+            humanWinThreat: humanThreats.maxConsecutive >= 4,
+            humanMultipleThreats: humanThreats.threeInARow >= 1 || humanThreats.twoInARow >= 3,
+            aiWinThreat: aiThreats.maxConsecutive >= 4,
+            stalemate: this.isStalemate(boardState)
+        };
+        
+        return {
+            gamePhase,
+            advantage,
+            aiThreats,
+            humanThreats,
+            emergencyThreats,
+            moveCount
+        };
+    }
+
+    /**
+     * 时光倒流决策 - 最重要的技能
+     * @param {Object} threatAnalysis - 威胁分析结果
+     * @returns {Object} 决策结果
+     */
+    shouldUseTimeRewind(threatAnalysis) {
+        // 策略文档：破解对方的必杀棋
+        if (threatAnalysis.emergencyThreats.humanWinThreat) {
+            return {
+                use: true,
+                reason: '对手有必杀威胁，使用时光倒流否定其关键棋步'
+            };
+        }
+        
+        // 策略文档：对手刚形成四三或双三等必胜棋
+        if (threatAnalysis.humanThreats.threeInARow >= 2) {
+            return {
+                use: true,
+                reason: '对手形成双三威胁，使用时光倒流破解'
+            };
+        }
+        
+        // 策略文档：对手即将形成不可防守的威胁
+        if (threatAnalysis.emergencyThreats.humanMultipleThreats && 
+            threatAnalysis.gamePhase === 'endgame') {
+            return {
+                use: true,
+                reason: '对手多重威胁，终局阶段使用时光倒流'
+            };
+        }
+        
+        return { use: false };
+    }
+
+    /**
+     * 力拔山兮决策 - 劣势搅局技能
+     * @param {Object} threatAnalysis - 威胁分析结果
+     * @returns {Object} 决策结果
+     */
+    shouldUseMountainMover(threatAnalysis) {
+        // 策略文档：优势时绝对不要用
+        if (threatAnalysis.advantage === 'advantage') {
+            return { use: false };
+        }
+        
+        // 策略文档：处于绝对劣势时
+        if (threatAnalysis.advantage === 'disadvantage' && 
+            threatAnalysis.emergencyThreats.humanMultipleThreats) {
+            return {
+                use: true,
+                reason: '处于绝对劣势，对手多重威胁，使用力拔山兮搅局'
+            };
+        }
+        
+        // 策略文档：对方即将形成但尚未形成必杀棋
+        if (threatAnalysis.humanThreats.maxConsecutive === 3 && 
+            threatAnalysis.humanThreats.twoInARow >= 2) {
+            return {
+                use: true,
+                reason: '对手即将形成必杀棋，使用力拔山兮破坏布局'
+            };
+        }
+        
+        return { use: false };
+    }
+
+    /**
+     * 飞沙走石决策 - 绝望时的最后选择
+     * @param {Object} threatAnalysis - 威胁分析结果
+     * @returns {Object} 决策结果
+     */
+    shouldUseFlySand(threatAnalysis) {
+        // 策略文档：必输无疑的最后挣扎
+        if (threatAnalysis.emergencyThreats.humanWinThreat && 
+            threatAnalysis.gamePhase === 'endgame') {
+            return {
+                use: true,
+                reason: '对手已有必杀棋，最后的绝望挣扎'
+            };
+        }
+        
+        // 策略文档：棋局陷入死寂僵局
+        if (threatAnalysis.emergencyThreats.stalemate && 
+            threatAnalysis.moveCount > 40) {
+            return {
+                use: true,
+                reason: '棋局陷入僵局，使用飞沙走石打破'
+            };
+        }
+        
+        return { use: false };
+    }
+
+    /**
+     * 检测是否僵局
+     * @param {Array} boardState - 棋盘状态
+     * @returns {boolean} 是否僵局
+     */
+    isStalemate(boardState) {
+        // 简单的僵局检测：棋盘大部分被占用但没有明显威胁
+        const totalPieces = this.countTotalPieces(boardState);
+        return totalPieces > 100 && !this.hasSignificantThreats(boardState);
+    }
+
+    /**
+     * 检测是否有重大威胁
+     * @param {Array} boardState - 棋盘状态
+     * @returns {boolean} 是否有重大威胁
+     */
+    hasSignificantThreats(boardState) {
+        const aiThreats = this.countConsecutivePieces(boardState, GameConfig.PLAYER.AI);
+        const humanThreats = this.countConsecutivePieces(boardState, GameConfig.PLAYER.HUMAN);
+        
+        return aiThreats.maxConsecutive >= 3 || humanThreats.maxConsecutive >= 3 ||
+               aiThreats.twoInARow >= 2 || humanThreats.twoInARow >= 2;
     }
 }
