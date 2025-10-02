@@ -55,9 +55,9 @@ class SmartAI {
                 mistake: 0.05    // 5%概率犯错
             },
             hard: {
-                defense: 1.2,    // 加强防守
-                attack: 1.1,     // 加强攻击
-                mistake: 0       // 不犯错
+                defense: 3.0,    // 防守能力大幅增强
+                attack: 2.5,     // 攻击能力大幅增强
+                mistake: 0.001   // 0.1%概率犯错，几乎完美
             }
         };
 
@@ -77,6 +77,26 @@ class SmartAI {
         };
 
         this.mistakeChance = mult.mistake;
+        
+        // 困难模式下的特殊增强
+        if (this.difficulty === 'hard') {
+            // 大幅提升关键战术的权重
+            this.SCORES.WIN = this.BASE_SCORES.WIN * 2;
+            this.SCORES.BLOCK_WIN = Math.floor(this.BASE_SCORES.BLOCK_WIN * 5);  // 极其重视防守
+            this.SCORES.FOUR = Math.floor(this.BASE_SCORES.FOUR * 3);
+            this.SCORES.BLOCK_FOUR = Math.floor(this.BASE_SCORES.BLOCK_FOUR * 4);
+            this.SCORES.THREE = Math.floor(this.BASE_SCORES.THREE * 2.5);
+            this.SCORES.BLOCK_THREE = Math.floor(this.BASE_SCORES.BLOCK_THREE * 3);
+            
+            // 增加中心控制权重
+            this.SCORES.CENTER = this.BASE_SCORES.CENTER * 3;
+            
+            // 添加高级战术权重
+            this.SCORES.DOUBLE_THREE = 80000;  // 双三必胜
+            this.SCORES.FOUR_THREE = 90000;    // 四三必胜
+            this.SCORES.BLOCK_DOUBLE_THREE = 70000;  // 阻止对手双三
+            this.SCORES.BLOCK_FOUR_THREE = 85000;    // 阻止对手四三
+        }
     }
 
     /**
@@ -148,6 +168,13 @@ class SmartAI {
         // 检查AI的攻击机会
         const aiAttackScore = this.getAttackScore(boardState, x, y, aiPlayer);
         score += aiAttackScore;
+        
+        // 困难模式下检查高级战术
+        if (this.difficulty === 'hard') {
+            // 检查是否能形成四三或双三
+            const advancedTactics = this.checkAdvancedTactics(boardState, x, y, aiPlayer);
+            score += advancedTactics;
+        }
 
         // 恢复原状态
         boardState[x][y] = 0;
@@ -155,7 +182,19 @@ class SmartAI {
         // 临时放置人类棋子，检查防守价值
         boardState[x][y] = humanPlayer;
         const humanAttackScore = this.getAttackScore(boardState, x, y, humanPlayer);
-        const defenseScore = humanAttackScore * 0.9; // 防守稍微低于攻击
+        let defenseScore = humanAttackScore * 0.9; // 防守稍微低于攻击
+        
+        // 困难模式下加强防守
+        if (this.difficulty === 'hard') {
+            defenseScore = humanAttackScore * 1.2; // 防守比攻击更重要
+            
+            // 检查是否需要阻止对手的高级战术
+            const blockAdvancedTactics = this.checkAdvancedTactics(boardState, x, y, humanPlayer);
+            if (blockAdvancedTactics > 0) {
+                defenseScore += blockAdvancedTactics * 0.8; // 阻止对手高级战术
+            }
+        }
+        
         score += defenseScore;
 
         // 恢复原状态
@@ -383,12 +422,134 @@ class SmartAI {
     }
 
     /**
+     * 检查高级战术（四三、双三等）
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} x - x坐标
+     * @param {number} y - y坐标
+     * @param {number} player - 玩家标识
+     * @returns {number} 高级战术分数
+     */
+    checkAdvancedTactics(boardState, x, y, player) {
+        let tacticsScore = 0;
+        
+        // 检查四个方向上的连线情况
+        let activeThrees = 0;  // 活三数量
+        let activeFours = 0;   // 活四数量
+        
+        for (const [dx, dy] of this.DIRECTIONS) {
+            const lineInfo = this.analyzeLineAdvanced(boardState, x, y, dx, dy, player);
+            
+            if (lineInfo.isActiveFour) {
+                activeFours++;
+            }
+            if (lineInfo.isActiveThree) {
+                activeThrees++;
+            }
+        }
+        
+        // 四三战术：同时有活四和活三
+        if (activeFours >= 1 && activeThrees >= 1) {
+            tacticsScore += this.SCORES.FOUR_THREE || 90000;
+        }
+        // 双三战术：同时有两个或以上活三
+        else if (activeThrees >= 2) {
+            tacticsScore += this.SCORES.DOUBLE_THREE || 80000;
+        }
+        // 单个活四
+        else if (activeFours >= 1) {
+            tacticsScore += this.SCORES.FOUR * 1.5;
+        }
+        // 单个活三
+        else if (activeThrees >= 1) {
+            tacticsScore += this.SCORES.THREE * 1.2;
+        }
+        
+        return tacticsScore;
+    }
+    
+    /**
+     * 高级线条分析
+     * @param {Array} boardState - 棋盘状态
+     * @param {number} x - x坐标
+     * @param {number} y - y坐标
+     * @param {number} dx - x方向
+     * @param {number} dy - y方向
+     * @param {number} player - 玩家标识
+     * @returns {Object} 线条分析结果
+     */
+    analyzeLineAdvanced(boardState, x, y, dx, dy, player) {
+        let count = 1; // 包括当前位置
+        let leftEmpty = 0, rightEmpty = 0;
+        let leftBlocked = false, rightBlocked = false;
+        
+        // 向左检查
+        for (let i = 1; i < 5; i++) {
+            const nx = x - dx * i;
+            const ny = y - dy * i;
+            
+            if (nx < 0 || nx >= 15 || ny < 0 || ny >= 15) {
+                leftBlocked = true;
+                break;
+            }
+            
+            if (boardState[nx][ny] === player) {
+                count++;
+            } else if (boardState[nx][ny] === 0) {
+                leftEmpty++;
+                break;
+            } else {
+                leftBlocked = true;
+                break;
+            }
+        }
+        
+        // 向右检查
+        for (let i = 1; i < 5; i++) {
+            const nx = x + dx * i;
+            const ny = y + dy * i;
+            
+            if (nx < 0 || nx >= 15 || ny < 0 || ny >= 15) {
+                rightBlocked = true;
+                break;
+            }
+            
+            if (boardState[nx][ny] === player) {
+                count++;
+            } else if (boardState[nx][ny] === 0) {
+                rightEmpty++;
+                break;
+            } else {
+                rightBlocked = true;
+                break;
+            }
+        }
+        
+        // 判断是否为活线
+        const isActiveFour = (count === 4) && !leftBlocked && !rightBlocked;
+        const isActiveThree = (count === 3) && !leftBlocked && !rightBlocked && (leftEmpty > 0 || rightEmpty > 0);
+        
+        return {
+            count,
+            isActiveFour,
+            isActiveThree,
+            leftBlocked,
+            rightBlocked,
+            leftEmpty,
+            rightEmpty
+        };
+    }
+
+    /**
      * 根据分数获取推理说明
      * @param {number} score - 分数
      * @returns {string} 推理说明
      */
     getReasoningForScore(score) {
         if (score >= this.SCORES.WIN) return '直接获胜';
+        if (score >= (this.SCORES.FOUR_THREE || 90000)) return '四三必胜战术';
+        if (score >= (this.SCORES.BLOCK_FOUR_THREE || 85000)) return '阻止对手四三';
+        if (score >= (this.SCORES.DOUBLE_THREE || 80000)) return '双三必胜战术';
+        if (score >= (this.SCORES.BLOCK_DOUBLE_THREE || 70000)) return '阻止对手双三';
         if (score >= this.SCORES.BLOCK_WIN) return '阻止对手获胜';
         if (score >= this.SCORES.FOUR) return '形成四连威胁';
         if (score >= this.SCORES.BLOCK_FOUR) return '阻止对手四连';
