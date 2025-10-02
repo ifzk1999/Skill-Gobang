@@ -135,6 +135,13 @@ class SmartAI {
                 blockMove.reasoning = '阻止对手获胜';
                 return blockMove;
             }
+
+            // 活四/活三必防：如果对手在任一空位落子能形成活四或活三，立即在该点封堵
+            const urgentDefense = this.findImmediateDefenseMove(boardState, humanPlayer);
+            if (urgentDefense) {
+                urgentDefense.reasoning = urgentDefense.type === 'openFour' ? '必防：对手活四点' : '必防：对手活三点';
+                return urgentDefense;
+            }
             
             // 检查高级战术机会（四三、双三）
             const tacticMove = this.findAdvancedTacticMove(boardState, aiPlayer);
@@ -231,6 +238,44 @@ class SmartAI {
         score += centerBonus;
 
         return score;
+    }
+
+    /**
+     * 查找对手活四/活三的立即封堵点
+     * 思路：遍历所有空位，临时放置对手棋，若在任意方向形成活四或活三，则该空位为AI的封堵点
+     * @param {Array} boardState
+     * @param {number} humanPlayer
+     * @returns {{x:number,y:number,type:'openFour'|'openThree'}|null}
+     */
+    findImmediateDefenseMove(boardState, humanPlayer) {
+        const emptyPositions = this.getEmptyPositions(boardState);
+        for (const pos of emptyPositions) {
+            // 临时将该空位设为对手落子
+            boardState[pos.x][pos.y] = humanPlayer;
+            let hasOpenFour = false;
+            let hasOpenThree = false;
+            for (const [dx, dy] of this.DIRECTIONS) {
+                const info = this.analyzeLineAdvanced(boardState, pos.x, pos.y, dx, dy, humanPlayer);
+                // 活四：count===4 且两端不堵
+                if (info.isActiveFour) {
+                    hasOpenFour = true;
+                    break;
+                }
+                // 活三：count===3 且两端不堵（analyzeLineAdvanced 已判断）
+                if (info.isActiveThree) {
+                    hasOpenThree = true;
+                }
+            }
+            // 恢复
+            boardState[pos.x][pos.y] = 0;
+            if (hasOpenFour) {
+                return { x: pos.x, y: pos.y, type: 'openFour', score: (this.SCORES && this.SCORES.BLOCK_FOUR) ? this.SCORES.BLOCK_FOUR : 100000 };
+            }
+            if (hasOpenThree) {
+                return { x: pos.x, y: pos.y, type: 'openThree', score: (this.SCORES && this.SCORES.BLOCK_THREE) ? this.SCORES.BLOCK_THREE : 80000 };
+            }
+        }
+        return null;
     }
 
     /**

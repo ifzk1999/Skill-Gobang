@@ -133,8 +133,12 @@ class GameController {
             // 首先检查是否使用技能
             const availableSkills = this.skillSystem.getAvailableSkills(GameConfig.PLAYER.AI);
             const gameHistory = this.getRecentMoves(6);
-            
-            if (availableSkills.length > 0) {
+
+            // 规则：如果玩家未使用任何技能，则AI不先使用技能（完全按后手策略）
+            const humanSkillsUsed = this.skillSystem.getSkillsUsed()[GameConfig.PLAYER.HUMAN];
+            const humanHasUsedAnySkill = Object.values(humanSkillsUsed).some(Boolean);
+
+            if (availableSkills.length > 0 && humanHasUsedAnySkill) {
                 const skillDecision = await this.aiService.shouldUseSkill(
                     this.boardManager.toArray(),
                     availableSkills,
@@ -168,6 +172,9 @@ class GameController {
                         }
                     }
                 }
+            }
+            else if (!humanHasUsedAnySkill) {
+                console.log('规则：玩家未使用技能，AI本回合不使用技能');
             }
             
             // AI落子
